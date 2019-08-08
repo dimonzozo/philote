@@ -1,7 +1,1 @@
-.dependencies
 philote
-admin/philote-admin
-src/lua/scripts/*.go
-pkg/
-bin/
-/config.mk

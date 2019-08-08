@@ -1,37 +1,37 @@
 package main
 
 import (
-  "net/http"
-  "runtime"
+	"net/http"
+	"runtime"
 
-  log "github.com/sirupsen/logrus"
-  "github.com/gorilla/websocket"
+	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 )
 
-var Config *config = LoadConfig()
+var Config = LoadConfig()
 var Upgrader = websocket.Upgrader{
-  ReadBufferSize:  Config.readBufferSize,
-  WriteBufferSize: Config.writeBufferSize,
-  CheckOrigin: func(r *http.Request) bool {
-    return true
-  },
+	ReadBufferSize:  Config.readBufferSize,
+	WriteBufferSize: Config.writeBufferSize,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 func main() {
-  log.WithFields(log.Fields{
-    "version": VERSION,
-    "port": Config.port,
-    "cores": runtime.NumCPU()}).Info("Initializing Philotic Network")
+	log.WithFields(log.Fields{
+		"port":  Config.port,
+		"cores": runtime.NumCPU()}).Info("Initializing Philotic Network")
 
-  log.WithFields(log.Fields{
-    "read-buffer-size": Config.readBufferSize,
-    "write-buffer-size": Config.writeBufferSize,
-    "max-connections": Config.maxConnections}).Debug("Configuration options:")
+	log.WithFields(log.Fields{
+		"read-buffer-size":  Config.readBufferSize,
+		"write-buffer-size": Config.writeBufferSize,
+		"max-connections":   Config.maxConnections}).Debug("Configuration options:")
 
-  h := NewHive()
-  http.HandleFunc("/", h.ServeNewConnection)
+	h := NewHive()
+	http.HandleFunc("/", h.ServeNewConnection)
 
-  err := http.ListenAndServe(":" + Config.port, nil); if err != nil {
-    log.Fatal("ListenAndServe: ", err)
-  }
+	err := http.ListenAndServe(":"+Config.port, nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
