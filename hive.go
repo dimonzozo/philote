@@ -4,19 +4,22 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type hive struct {
-	Philotes   map[string]*Philote
-	Connect    chan *Philote
-	Disconnect chan *Philote
+	m          *sync.Mutex
+	philotes   map[string]*Philote
+	connect    chan *Philote
+	disconnect chan *Philote
 }
 
 func NewHive() *hive {
 	h := &hive{
-		Philotes:   map[string]*Philote{},
-		Connect:    make(chan *Philote),
-		Disconnect: make(chan *Philote),
+		m:          &sync.Mutex{},
+		philotes:   map[string]*Philote{},
+		connect:    make(chan *Philote),
+		disconnect: make(chan *Philote),
 	}
 
 	go h.MaintainPhiloteIndex()
@@ -24,24 +27,56 @@ func NewHive() *hive {
 	return h
 }
 
+func (h *hive) PhilotesCount() int {
+	h.m.Lock()
+	defer h.m.Unlock()
+	return len(h.philotes)
+}
+
+func (h *hive) Disconnect(philote *Philote) {
+	h.disconnect <- philote
+}
+
+func (h *hive) Publish(message *Message) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	for _, philote := range h.philotes {
+		if message.IssuerID == philote.ID {
+			continue
+		}
+
+		for _, channel := range philote.AccessKey.Read {
+			if message.Channel == channel {
+				philote.IncomingMessages <- message
+				break
+			}
+		}
+
+	}
+}
+
 func (h *hive) MaintainPhiloteIndex() {
 	log.Debug("Starting bookeeper")
 
 	for {
 		select {
-		case p := <-h.Connect:
-			if len(h.Philotes) >= Config.maxConnections {
+		case p := <-h.connect:
+			if h.PhilotesCount() >= Config.maxConnections {
 				log.WithFields(log.Fields{"philote": p.ID}).Warn("MAX_CONNECTIONS limit reached, dropping new connection")
 				p.disconnect()
 			}
 
 			log.WithFields(log.Fields{"philote": p.ID}).Debug("Registering Philote")
-			p.Hive = h
-			h.Philotes[p.ID] = p
+			h.m.Lock()
+			p.SetHive(h)
+			h.philotes[p.ID] = p
+			h.m.Unlock()
 			go p.Listen()
-		case p := <-h.Disconnect:
+		case p := <-h.disconnect:
 			log.WithFields(log.Fields{"philote": p.ID}).Debug("Disconnecting Philote")
-			delete(h.Philotes, p.ID)
+			h.m.Lock()
+			delete(h.philotes, p.ID)
+			h.m.Unlock()
 			p.disconnect()
 		}
 	}
@@ -69,5 +104,5 @@ func (h *hive) ServeNewConnection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	philote := NewPhilote(accessKey, connection)
-	h.Connect <- philote
+	h.connect <- philote
 }

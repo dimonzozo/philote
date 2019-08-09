@@ -13,7 +13,7 @@ import (
 
 func TestHiveSuccessfulPhiloteRegistration(t *testing.T) {
 	h := NewHive()
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("new Hive shouldn't have registered philotes")
 	}
 
@@ -29,7 +29,7 @@ func TestHiveSuccessfulPhiloteRegistration(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(h.ServeNewConnection))
 	header := map[string][]string{
-		"Authorization": []string{"Bearer " + tokenString},
+		"Authorization": {"Bearer " + tokenString},
 	}
 	u, _ := url.Parse(server.URL)
 	u.Scheme = "ws"
@@ -38,14 +38,17 @@ func TestHiveSuccessfulPhiloteRegistration(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(h.Philotes) != 1 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 1 {
 		t.Error("philote should  be registered on successful auth")
 	}
 }
 
 func TestHiveSuccessfulPhiloteRegistrationWithQuerystring(t *testing.T) {
 	h := NewHive()
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("new Hive shouldn't have registered philotes")
 	}
 
@@ -72,20 +75,23 @@ func TestHiveSuccessfulPhiloteRegistrationWithQuerystring(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(h.Philotes) != 1 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 1 {
 		t.Error("philote should  be registered on successful auth")
 	}
 }
 
 func TestHiveIncorrectAuth(t *testing.T) {
 	h := NewHive()
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("new Hive shouldn't have registered philotes")
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(h.ServeNewConnection))
 	header := map[string][]string{
-		"Authorization": []string{"Bearer " + "foo"},
+		"Authorization": {"Bearer " + "foo"},
 	}
 	u, _ := url.Parse(server.URL)
 	u.Scheme = "ws"
@@ -94,14 +100,17 @@ func TestHiveIncorrectAuth(t *testing.T) {
 		t.Error("The Dial action should fail when there is no auth token")
 	}
 
-	if len(h.Philotes) != 0 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 0 {
 		t.Error("philote should not be registered when missing auth")
 	}
 }
 
 func TestHivePhiloteRegistrationWithNoAuth(t *testing.T) {
 	h := NewHive()
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("new Hive shouldn't have registered philotes")
 	}
 
@@ -113,7 +122,10 @@ func TestHivePhiloteRegistrationWithNoAuth(t *testing.T) {
 		t.Error("The Dial action should fail when there is no auth token")
 	}
 
-	if len(h.Philotes) != 0 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 0 {
 		t.Error("philote should not be registered when missing auth")
 	}
 }
@@ -130,7 +142,7 @@ func TestHiveDeregisterPhilote(t *testing.T) {
 	}
 	server := httptest.NewServer(http.HandlerFunc(h.ServeNewConnection))
 	header := map[string][]string{
-		"Authorization": []string{"Bearer " + tokenString},
+		"Authorization": {"Bearer " + tokenString},
 	}
 	u, _ := url.Parse(server.URL)
 	u.Scheme = "ws"
@@ -139,14 +151,18 @@ func TestHiveDeregisterPhilote(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(h.Philotes) != 1 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 1 {
 		t.Error("philote should  be registered on successful auth")
 	}
 
 	conn.Close()
-	time.Sleep(time.Second)
+	// wait for deregister message to be processed
+	time.Sleep(time.Millisecond * 500)
 
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("Disconnected Philotes should be automatically deregistered")
 	}
 }

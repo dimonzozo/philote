@@ -10,7 +10,7 @@ import (
 type Philote struct {
 	ID               string
 	AccessKey        *AccessKey
-	Hive             *hive
+	hive             *hive
 	ws               *websocket.Conn
 	IncomingMessages chan *Message
 }
@@ -26,6 +26,10 @@ func NewPhilote(ak *AccessKey, ws *websocket.Conn) *Philote {
 	go p.DistributeIncomingMessages()
 
 	return p
+}
+
+func (p *Philote) SetHive(hive *hive) {
+	p.hive = hive
 }
 
 func (p *Philote) DistributeIncomingMessages() {
@@ -47,7 +51,7 @@ func (p *Philote) Listen() {
 				"philote": p.ID,
 				"error":   err.Error()}).Warn("Error reading from socket, disconnecting")
 
-			p.Hive.Disconnect <- p
+			p.hive.Disconnect(p)
 			break
 		}
 
@@ -75,18 +79,5 @@ func (p *Philote) disconnect() {
 
 func (p *Philote) publish(message *Message) {
 	message.IssuerID = p.ID
-
-	for _, philote := range p.Hive.Philotes {
-		if p.ID == philote.ID {
-			continue
-		}
-
-		for _, channel := range philote.AccessKey.Read {
-			if message.Channel == channel {
-				philote.IncomingMessages <- message
-				break
-			}
-		}
-
-	}
+	p.hive.Publish(message)
 }

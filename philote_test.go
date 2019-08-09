@@ -13,7 +13,7 @@ import (
 
 func TestPhilotesExchangingMessages(t *testing.T) {
 	h := NewHive()
-	if len(h.Philotes) != 0 {
+	if h.PhilotesCount() != 0 {
 		t.Error("new Hive shouldn't have registered philotes")
 	}
 
@@ -42,7 +42,10 @@ func TestPhilotesExchangingMessages(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(h.Philotes) != 2 {
+	// wait for connection message to be processed
+	time.Sleep(time.Millisecond * 500)
+
+	if h.PhilotesCount() != 2 {
 		t.Error("Both philotes should be connected and registered")
 	}
 	originalMessage := &Message{Data: "yo!", Channel: "test-channel"}
