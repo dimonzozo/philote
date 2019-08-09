@@ -4,18 +4,10 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
 
 var Config = LoadConfig()
-var Upgrader = websocket.Upgrader{
-	ReadBufferSize:  Config.readBufferSize,
-	WriteBufferSize: Config.writeBufferSize,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 func main() {
 	log.WithFields(log.Fields{
